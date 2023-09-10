@@ -88,7 +88,7 @@ def main(target_process):
     Interceptor.replace(
         new NativeFunction(Module.findExportByName('advapi32.dll', 'RegGetValueW'), "uint", ["pointer", "pointer", "pointer", "uint32", "pointer", "pointer", "pointer" ]), 
         new NativeCallback((a, b, c, d, e, f, g) => { 
-          let str = "23423423423:fff";
+          let str = "23423423423:fff"; // my code checks for length > 8, so i have to create a long dummy string
           let size = str.length * 2 + 2;
           if (f == 0) {
             g.writeU32(size); 
@@ -96,7 +96,7 @@ def main(target_process):
             let retPtr = Memory.allocUtf16String(str);
             retPtr.writeUtf16String(str);
             Memory.copy(f, retPtr, size);
-            //f.writeUtf16String(); // my code checks for length > 8
+            // f.writeUtf16String();  does not work, it seems f needs re-allocation
           }
 
           return 0; 
