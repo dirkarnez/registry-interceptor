@@ -3,6 +3,9 @@ registry-interceptor
 ### Use with
 - [dirkarnez/cpp-registry-playground](https://github.com/dirkarnez/cpp-registry-playground)
 
+### Notes
+- It is not that simple that we can blindly hook functions, it will probably fail when the target application have fancy use of those functions (e.g. call the same function multiple times to get value)
+
 ### Reference
 - https://github.com/ConsciousHacker/WFH/blob/main/registry.js
 - https://github.com/xforcered/WFH/blob/main/registry.js
