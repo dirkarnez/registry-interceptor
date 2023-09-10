@@ -85,12 +85,114 @@ def main(target_process):
     session = frida.attach(target_process)
 
     script = session.create_script("""
-      Interceptor.attach(Module.findExportByName('advapi32.dll', 'RegGetValueW'), { 
+    var aDict = new Array();
+
+
+var fNtQueryKey = new NativeFunction(
+    Module.findExportByName('Ntdll.dll', 'NtQueryKey'),
+    "uint",
+    [
+        "pointer",
+        "uint", 
+        "pointer", 
+        "uint",
+        "pointer"
+    ]
+);
+
+
+function getKeyPath(hKey)  {
+    var pBuff = Memory.alloc(0x1000);
+    var pRes = Memory.alloc(0x4);
+    var iNTSTATUS = fNtQueryKey(hKey, 3, pBuff, 0x1000, pRes);
+    if (iNTSTATUS == 0) { //NTSTATUS_SUCCESS
+        return (pBuff.add(4)).readUtf16String();
+    } else {
+        return;
+    }
+}
+
+function getHivePreDefKey(hKey) {
+    if (hKey == 0x80000000) {
+        return "HKEY_CLASSES_ROOT";
+    } else if (hKey == 0x80000001) {
+        return "HKEY_CURRENT_USER";
+    } else if (hKey == 0x80000002) {
+        return "HKEY_LOCAL_MACHINE";
+    } else if (hKey == 0x80000003) {
+        return "HKEY_USERS";
+    } else if (hKey == 0x80000004) {
+        return "HKEY_PERFORMANCE_DATA";
+    } else if (hKey == 0x80000050) {
+        return "HKEY_PERFORMANCE_TEXT";
+    } else if (hKey == 0x80000060) {
+        return "HKEY_PERFORMANCE_NLSTEXT";
+    } else if (hKey == 0x80000005) {
+        return "HKEY_CURRENT_CONFIG";
+    } else if (hKey == 0x80000006) {
+        return "HKEY_DYN_DATA";
+    } else {
+        return;
+    }
+}
+
+    function findInArrayDict(hKey) {
+      for (var i = 0; i < aDict.length; i++) {
+          if (aDict[i].hKey == hKey.toString()) {
+              return aDict[i];
+          }
+      }
+      return;
+  }
+
+
+/*
+        Interceptor.attach(Module.findExportByName('Kernel32.dll', 'RegOpenKeyEx'), {
+            onEnter: function (args) {
+
+      
+                console.log(`${defLookup}`);
+                  
+              
+                             
+            },
+            onLeave: function(retval) {
+              if (retval.toInt32() == 0) { //ERROR_SUCCESS
+                    if (this.bStoreRes) {
+                        var oReg = {"path": this.sPath, "hKey": ((this.pHandle).readPointer()).toString()};
+                        aDict.push(oReg);
+                        //send("I stored a val here..");
+                    }
+                }
+            }
+        });
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+          Interceptor.attach(Module.findExportByName('advapi32.dll', 'RegGetValueW'), { 
             onEnter: function (args) {
                 // Intercepting function entry
                 console.log('RegGetValueW called from:');
                 
                 const hKey = args[0];
+
+                const sBasePath = getKeyPath(hKey);
+
+                //var defLookup = getHivePreDefKey(hKey.toUInt32());
+
+
                 const lpSubKey = args[1].readUtf16String();
                 const lpValue = args[2].readUtf16String();
                 const dwFlags = args[3];
@@ -98,83 +200,16 @@ def main(target_process):
                 const pvData = args[5];
                 const pcbData = args[6];
 
-                console.log('[RegGetValueW] hKey:', hKey, 'lpSubKey:', lpSubKey, 'lpValue:', lpValue, 'dwFlags:', dwFlags, 'pdwType:', pdwType, 'pvData:', pvData, 'pcbData:', pcbData);
+                console.log('[RegGetValueW] hKey:', sBasePath, 'lpSubKey:', lpSubKey, 'lpValue:', lpValue, 'dwFlags:', dwFlags, 'pdwType:', pdwType, 'pvData:', pvData, 'pcbData:', pcbData);
 
-                // // Get the original function pointer
-                const originalRegGetValueW = new NativeFunction(Module.findExportByName('advapi32.dll', 'RegGetValueW'), 
-                'uint', 
-                ['pointer', 
-                'pointer', 
-                'pointer', 
-                'uint', 
-                'pointer', 
-                'pointer', 
-                'pointer'
-                ]);
 
-                console.log('[RegGetValueW] pointer is truey ?:', !!originalRegGetValueW);
-                
-                // Call the original function
-                // TODO: fix this
-                const returnValue = originalRegGetValueW(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-
-                // Intercepting the return value
-                console.log('[RegGetValueW] Return Value:', returnValue);
             },
             onLeave: function (retval) {
                 // Intercepting function exit
             }
         });
 
-/*
-      Interceptor.attach(RegOpenKeyExA, {
-        onEnter: function (args) {
-          const hKey = args[0];
-          const lpSubKey = args[1].readUtf8String();
-          const samDesired = args[2];
 
-          console.log('[RegOpenKeyExA] hKey:', hKey, 'lpSubKey:', lpSubKey, 'samDesired:', samDesired);
-        },
-        onLeave: function (retval) {}
-      });
-
-      Interceptor.attach(RegQueryValueExW, {
-        onEnter: function (args) {
-          const hKey = args[0];
-          const lpValueName = args[1].readUtf16String();
-
-          console.log('[RegQueryValueExW] hKey:', hKey, 'lpValueName:', lpValueName);
-        },
-        onLeave: function (retval) {}
-      });
-
-      Interceptor.attach(RegQueryValueExA, {
-        onEnter: function (args) {
-          const hKey = args[0];
-          const lpValueName = args[1].readUtf8String();
-
-          console.log('[RegQueryValueExA] hKey:', hKey, 'lpValueName:', lpValueName);
-        },
-        onLeave: function (retval) {}
-      });
-
-      Interceptor.attach(RegCloseKey, {
-        onEnter: function (args) {
-          const hKey = args[0];
-
-          console.log('[RegCloseKey] hKey:', hKey);
-        },
-        onLeave: function (retval) {}
-      });
-
-      Interceptor.attach(RegCloseKeyA, {
-        onEnter: function (args) {
-          const hKey = args[0];
-
-          console.log('[RegCloseKeyA] hKey:', hKey);
-        },
-        onLeave: function (retval) {}
-      });*/
 """)
     script.on('message', on_message)
     script.load()
