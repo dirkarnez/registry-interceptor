@@ -84,7 +84,24 @@ def on_message(message, data):
 def main(target_process):
     session = frida.attach(target_process)
 
-    script = session.create_script("""
+    script = session.create_script("""      
+    Interceptor.replace(
+        new NativeFunction(Module.findExportByName('advapi32.dll', 'RegGetValueW'), "uint", ["pointer", "pointer", "pointer", "uint32", "pointer", "pointer", "pointer" ]), 
+        new NativeCallback((a, b, c, d, e, f, g) => { 
+          let str = "23423423423:fff";
+          let size = str.length * 2 + 2;
+          if (f == 0) {
+            g.writeU32(size); 
+          } else {
+            let retPtr = Memory.allocUtf16String(str);
+            retPtr.writeUtf16String(str);
+            Memory.copy(f, retPtr, size);
+            //f.writeUtf16String(); // my code checks for length > 8
+          }
+
+          return 0; 
+        }, "uint", ["pointer", "pointer", "pointer", "uint32", "pointer", "pointer", "pointer" ])
+      );
     var aDict = new Array();
 
 
@@ -174,10 +191,7 @@ function getHivePreDefKey(hKey) {
 
 
 
-
-
-
-
+ 
 
 
 
@@ -208,8 +222,6 @@ function getHivePreDefKey(hKey) {
                 // Intercepting function exit
             }
         });
-
-
 """)
     script.on('message', on_message)
     script.load()
