@@ -5,6 +5,25 @@ registry-interceptor
 
 ### Notes
 - It is not that simple that we can blindly hook functions, it will probably fail when the target application have fancy use of those functions (e.g. call the same function multiple times to get value)
+- All reading functions
+  - `RegEnumKeyA`
+  - `RegEnumKeyExA`
+  - `RegEnumKeyExW`
+  - `RegEnumKeyW`
+  - `RegEnumValueA`
+  - `RegEnumValueW`
+  - `RegGetValueA`
+  - `RegGetValueW`
+  - `RegOpenKeyA`
+  - `RegOpenKeyExA`
+  - `RegOpenKeyExW`
+  - `RegOpenKeyW`
+  - `RegQueryMultipleValuesA`
+  - `RegQueryMultipleValuesW`
+  - `RegQueryValueA`
+  - `RegQueryValueExA`
+  - `RegQueryValueExW`
+  - `RegQueryValueW`
 
 ### Reference
 - https://github.com/ConsciousHacker/WFH/blob/main/registry.js
